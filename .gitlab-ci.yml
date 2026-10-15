@@ -1,0 +1,29 @@
+# GitLab Pages deployment for the Integrito demo (Vite static build).
+# Deploys automatically on every push to master.
+#
+# Compatible with self-managed GitLab: classic `public/` artifact layout
+# (works across Pages versions that do not support `publish:`).
+
+image: node:20-bookworm
+
+stages:
+  - deploy
+
+pages:
+  stage: deploy
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+    - rm -rf public
+    - mv dist public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
