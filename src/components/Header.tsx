@@ -8,11 +8,11 @@ import {
   readHeaderAuthPreview,
   type HeaderAuthMode,
 } from './header/authPreview';
-import ProductsDropdown from './header/ProductsDropdown';
+import ProductsNav from './header/ProductsNav';
 import ProfileDropdown from './header/ProfileDropdown';
 import { CURRENT_PRODUCT_ID, INTEGRITO_PRODUCTS } from './header/products';
 
-type OpenMenu = 'products' | 'profile' | 'mobile' | null;
+type OpenMenu = 'profile' | 'mobile' | null;
 
 type Props = {
   theme: Theme;
@@ -112,10 +112,7 @@ export default function Header({
             />
           </a>
           <div className="header-desktop-products">
-            <ProductsDropdown
-              open={openMenu === 'products'}
-              onOpenChange={open => setOpenMenu(open ? 'products' : null)}
-            />
+            <ProductsNav />
           </div>
         </div>
 
@@ -182,7 +179,7 @@ export default function Header({
                           <div className="header-mobile-item is-soon">
                             <span>
                               {product.name}
-                              <span className="header-product-status">Coming soon</span>
+                              <span className="sr-only">Coming soon</span>
                             </span>
                             <p>{product.description}</p>
                           </div>
@@ -194,7 +191,14 @@ export default function Header({
                           >
                             <span>
                               {product.name}
-                              {current && <span className="blue-dot" aria-hidden="true" />}
+                              {current && (
+                                <>
+                                  <span className="header-product-status is-current-label">
+                                    Current
+                                  </span>
+                                  <span className="blue-dot" aria-hidden="true" />
+                                </>
+                              )}
                             </span>
                             <p>{product.description}</p>
                           </button>

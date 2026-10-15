@@ -274,7 +274,48 @@ button:disabled {
 .header-desktop-products {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
+
+/* V22.9.6 — desktop product strip (replaces Products ▾ dropdown) */
+.header-products-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 22px;
+}
+
+.header-product-link {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--button-icon-gap);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--button-font-size);
+  font-weight: var(--button-font-weight);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.header-product-link.is-current {
+  color: var(--text);
+}
+
+.header-product-link.is-soon {
+  color: var(--muted);
+}
+
+.header-product-link-name {
+  display: inline;
+}
+
 .nav-current {
   display: flex;
   gap: 11px;
@@ -1263,7 +1304,13 @@ h1 > span:not(.period) {
   }
 }
 
-@media (max-width: 760px) {
+/*
+  V22.9.6: Compact Header when three product names + account controls
+  no longer fit one row. Measured natural content ~1189px (+ pads/gaps);
+  desktop remains comfortable from ~1210px up. Switch at 1210px.
+  (Previously 760px with a single Products ▾ trigger.)
+*/
+@media (max-width: 1210px) {
   :root {
     --header-height: 45px;
     --page-pad-x: 24px;
@@ -1283,7 +1330,7 @@ h1 > span:not(.period) {
   .header-left {
     gap: 0;
   }
-  /* Logo | Theme | Menu — compact mobile gap */
+  /* Logo | Theme | Menu — compact gap */
   .header-right {
     gap: 14px;
   }
@@ -1384,7 +1431,7 @@ h1 > span:not(.period) {
   }
   .header-mobile-item.is-soon {
     cursor: default;
-    opacity: 0.72;
+    color: var(--muted);
   }
   .header-mobile-item .header-product-status {
     margin-left: 8px;
@@ -1860,10 +1907,18 @@ h1 > span:not(.period) {
 /*
   Overlay departing hero so ChatWorkspace does not shrink it in-flow.
   Fade .hero-copy only — layout position and size stay fixed.
+
+  V22.9.5: Do NOT use inset:0. Absolutely positioned children of main are
+  placed against the padding edge, so inset:0 drops main's horizontal
+  gutters (--page-pad-x) and the headline jumps left by that amount.
+  Match the idle Landing content box with explicit left/right gutters.
 */
 .page[data-transition="to-workspace"] .landing-hero-layer {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--page-pad-x);
+  right: var(--page-pad-x);
   z-index: 1;
   flex: none;
   pointer-events: none;
@@ -1877,6 +1932,13 @@ h1 > span:not(.period) {
 /*
   Workspace → Landing: spiral + hero stay at opacity 0 until ready (~350ms),
   then fade in. Gives WebGL time to present a frame before reveal.
+
+  V22.9.6: Absolute overlay matching idle Landing geometry. During reverse,
+  main remains main--workspace (padding-top 92px) while Workspace is still
+  mounted. An in-flow Hero would shrink to 808px and flex-center would shift
+  the headline ~46px down until the transition ended. Absolute top/bottom
+  with --page-pad-x gutters keeps the Hero at final Landing geometry for the
+  entire fade-in. Workspace stays absolute inset:0 at higher z-index.
 */
 .page[data-transition="to-landing"] .spiral-exit-layer {
   opacity: 0;
@@ -1888,6 +1950,13 @@ h1 > span:not(.period) {
 }
 
 .page[data-transition="to-landing"] .landing-hero-layer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--page-pad-x);
+  right: var(--page-pad-x);
+  z-index: 1;
+  flex: none;
   opacity: 0;
   animation: integrito-fade-in var(--landing-in-ms) var(--exit-ease) var(--landing-in-delay)
     forwards;
