@@ -1,13 +1,18 @@
 # GitLab Pages deployment for the Integrito demo (Vite static build).
 # Deploys automatically on every push to master.
 #
-# Compatible with self-managed GitLab: classic `public/` artifact layout
-# (works across Pages versions that do not support `publish:`).
-
-image: node:20-bookworm
+# Compatible with self-managed GitLab shell runners (image: is ignored there)
+# and Docker runners. Pins Node 20 via an official binary so npm ci works
+# with lockfileVersion 3.
 
 stages:
   - deploy
+
+variables:
+  NODE_VERSION: "20.18.1"
+  # Keep toolchain + npm cache inside the job workspace (no sudo required).
+  NODE_DIR: "${CI_PROJECT_DIR}/.ci-node"
+  npm_config_cache: "${CI_PROJECT_DIR}/.npm"
 
 pages:
   stage: deploy
@@ -15,10 +20,27 @@ pages:
     key:
       files:
         - package-lock.json
+      prefix: "node-${NODE_VERSION}"
     paths:
       - .npm/
+      - .ci-node/
+  before_script:
+    - |
+      set -e
+      if [ ! -x "${NODE_DIR}/bin/node" ]; then
+        echo "Installing Node.js ${NODE_VERSION} into ${NODE_DIR}"
+        curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz
+        rm -rf "${NODE_DIR}"
+        mkdir -p "${NODE_DIR}"
+        tar -xJf /tmp/node.tar.xz -C "${NODE_DIR}" --strip-components=1
+        rm -f /tmp/node.tar.xz
+      fi
+      export PATH="${NODE_DIR}/bin:${PATH}"
+      node -v
+      npm -v
   script:
-    - npm ci --cache .npm --prefer-offline
+    - export PATH="${NODE_DIR}/bin:${PATH}"
+    - npm ci
     - npm run build
     - rm -rf public
     - mv dist public
