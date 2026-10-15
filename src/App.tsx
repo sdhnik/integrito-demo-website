@@ -4,6 +4,7 @@ import Hero from './components/Hero';
 import LandingBelowHero from './components/landing/LandingBelowHero';
 import PromptInput, { COMPOSER_HEIGHT_COLLAPSE_MS } from './components/PromptInput';
 import DesignPlayground from './components/DesignPlayground';
+import ButtonShowcase from './components/ButtonShowcase';
 import GenerativeCanvas, { initialSettings } from './components/GenerativeCanvas';
 import ChatWorkspace from './components/ChatWorkspace/ChatWorkspace';
 import type { Theme } from './components/ThemeSwitcher';
@@ -247,6 +248,9 @@ export default function App() {
 
   const playground =
     import.meta.env.DEV || new URLSearchParams(window.location.search).get('playground') === '1';
+  const [buttonShowcase, setButtonShowcase] = useState(
+    () => import.meta.env.DEV && new URLSearchParams(window.location.search).get('buttons') === '1',
+  );
 
   const exitingToLanding = transition === 'to-landing';
   const enteringWorkspace = transition === 'to-workspace';
@@ -385,6 +389,18 @@ export default function App() {
           onChange={setSettings}
           theme={theme}
           onThemeChange={setTheme}
+        />
+      )}
+      {buttonShowcase && (
+        <ButtonShowcase
+          theme={theme}
+          onThemeChange={setTheme}
+          onClose={() => {
+            setButtonShowcase(false);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('buttons');
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+          }}
         />
       )}
       <dialog
