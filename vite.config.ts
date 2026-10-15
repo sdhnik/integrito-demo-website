@@ -1,15 +1,22 @@
 import { defineConfig } from 'vite';
 
 /**
- * Portable static hosting base for GitLab Pages.
+ * Shared Vite `base` for local, GitHub Pages, and GitLab Pages.
  *
- * Relative `./` keeps asset URLs correct whether Pages serves from a
- * project subdirectory or a dedicated domain root. Local `npm run dev`
- * is unaffected. Override with VITE_BASE_PATH if an absolute base is required.
+ * - Local / default: `/` — `npm run dev` and plain `npm run build` stay at root.
+ * - GitHub Actions: sets `VITE_BASE_PATH=/integrito-demo-website/` (repo name).
+ * - GitLab CI: sets `VITE_BASE_PATH` from `CI_PAGES_URL` path, or an explicit
+ *   CI/CD variable — never hardcode a GitLab hostname or namespace here.
  *
- * Example (only if your Pages path is confirmed):
- *   VITE_BASE_PATH=/integrito-demo-website/ npm run build
+ * Values should use leading and trailing slashes (e.g. `/my-project/`).
+ * `/` is left unchanged.
  */
+function resolveBase(raw: string | undefined): string {
+  if (!raw || raw === '/') return '/';
+  const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || './',
+  base: resolveBase(process.env.VITE_BASE_PATH),
 });

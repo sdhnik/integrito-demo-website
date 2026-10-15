@@ -1,16 +1,22 @@
 # GitLab Pages deployment for the Integrito demo (Vite static build).
-# Deploys automatically on every push to master.
+# Independent of GitHub Actions — same codebase, separate CI.
+#
+# Trigger: push to master.
 #
 # Compatible with self-managed GitLab shell runners (image: is ignored there)
-# and Docker runners. Pins Node 20 via an official binary so npm ci works
+# and Docker runners. Pins Node via an official binary so npm ci works
 # with lockfileVersion 3.
+#
+# Vite base path (do not guess the Pages hostname):
+#   1. CI/CD variable VITE_BASE_PATH if set (recommended override)
+#   2. Else path derived from CI_PAGES_URL when GitLab provides it
+#   3. Else "/" (document and set VITE_BASE_PATH if assets 404)
 
 stages:
   - deploy
 
 variables:
   NODE_VERSION: "20.18.1"
-  # Keep toolchain + npm cache inside the job workspace (no sudo required).
   NODE_DIR: "${CI_PROJECT_DIR}/.ci-node"
   npm_config_cache: "${CI_PROJECT_DIR}/.npm"
 
@@ -41,7 +47,25 @@ pages:
   script:
     - export PATH="${NODE_DIR}/bin:${PATH}"
     - npm ci
-    - npm run build
+    - |
+      set -e
+      export PATH="${NODE_DIR}/bin:${PATH}"
+      if [ -n "${VITE_BASE_PATH:-}" ]; then
+        echo "Using CI variable VITE_BASE_PATH=${VITE_BASE_PATH}"
+      elif [ -n "${CI_PAGES_URL:-}" ]; then
+        export VITE_BASE_PATH="$(node -e '
+          const u = new URL(process.env.CI_PAGES_URL);
+          const p = u.pathname.replace(/\/$/, "");
+          process.stdout.write(p ? `${p}/` : "/");
+        ')"
+        echo "Derived VITE_BASE_PATH=${VITE_BASE_PATH} from CI_PAGES_URL=${CI_PAGES_URL}"
+      else
+        export VITE_BASE_PATH="/"
+        echo "WARNING: CI_PAGES_URL unset; defaulting VITE_BASE_PATH=/."
+        echo "If assets 404 under a project subpath, set CI/CD variable VITE_BASE_PATH (e.g. /integrito-demo-website/)."
+      fi
+      npm run build
+    # Classic Pages artifact layout (compatible with self-managed GitLab).
     - rm -rf public
     - mv dist public
   artifacts:

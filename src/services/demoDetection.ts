@@ -36,7 +36,7 @@ export function runDemoDetection(
   options?: {
     signal?: AbortSignal;
     delayMs?: number;
-    /** Development-only (?demo=1). Never enable in normal production flows. */
+    /** When true (?demo=1), allow the predefined sample fixture for exact text match only. */
     allowSampleFixture?: boolean;
   },
 ): Promise<DemoDetectionResult> {

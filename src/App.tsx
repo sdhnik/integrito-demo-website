@@ -76,7 +76,7 @@ export default function App() {
   const [composerMode, setComposerMode] = useState<ComposerMode>('new-check');
   const [composerActive, setComposerActive] = useState(false);
   const [focusToken, setFocusToken] = useState(0);
-  /** Development-only sample result path (?demo=1). */
+  /** Presentation demo (?demo=1): sample fixture only when text matches exactly. */
   const [demoMode] = useState(readDemoMode);
   const dialog = useRef<HTMLDialogElement>(null);
   const timers = useRef<number[]>([]);
