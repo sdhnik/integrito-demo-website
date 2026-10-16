@@ -1,5 +1,6 @@
 import { createSpiralRings, ringRadiusAt, SPIRAL_PHRASES } from './spiralGeometry';
 import {
+  applySidebarRingSubtract,
   BASE_RING_COUNT,
   resolveResponsiveRingCount,
   type CanvasSettings,
@@ -41,6 +42,11 @@ export type SpiralBakeInput = {
   theme: 'light' | 'dark';
   settings: CanvasSettings;
   phrases: readonly string[];
+  /**
+   * V22.9.9 — when > 0 (sidebar nav variants), drop this many outermost
+   * rings from the responsive count without redistributing radii.
+   */
+  ringCountSubtract?: number;
 };
 
 export type SpiralBakeResult = {
@@ -56,22 +62,31 @@ export type SpiralBakeResult = {
  * Total rings for the bake.
  * Responsive (default): viewport-width breakpoints, base 10 + outer extras.
  * Fixed: base 10 for Minimal; legacy counts for older spacing presets.
+ * Optional ringCountSubtract clips outer rings (sidebar variants only).
  */
 export function resolveRingCount(
   viewportWidth: number,
   mobile: boolean,
   settings: CanvasSettings,
+  ringCountSubtract = 0,
 ): number {
+  let count: number;
   if (settings.ringCountMode === 'Responsive') {
-    return resolveResponsiveRingCount(viewportWidth);
+    count = resolveResponsiveRingCount(viewportWidth);
+  } else if (settings.ringSpacing === 'Minimal') {
+    count = BASE_RING_COUNT;
+  } else if (settings.ringSpacing === 'Airy') {
+    count = mobile ? 8 : 12;
+  } else {
+    const base = mobile ? BASE_RING_COUNTS.mobile : BASE_RING_COUNTS.desktop[settings.intensity];
+    const scaled = Math.round(base * SPACING_RING_SCALE[settings.ringSpacing]);
+    count = Math.max(mobile ? 8 : 10, scaled);
   }
 
-  // Fixed — compare against the base 10-ring composition.
-  if (settings.ringSpacing === 'Minimal') return BASE_RING_COUNT;
-  if (settings.ringSpacing === 'Airy') return mobile ? 8 : 12;
-  const base = mobile ? BASE_RING_COUNTS.mobile : BASE_RING_COUNTS.desktop[settings.intensity];
-  const scaled = Math.round(base * SPACING_RING_SCALE[settings.ringSpacing]);
-  return Math.max(mobile ? 8 : 10, scaled);
+  if (ringCountSubtract > 0) {
+    return applySidebarRingSubtract(count, ringCountSubtract);
+  }
+  return count;
 }
 
 /** Inner rings slightly softer; outer rings keep full presence. Baked once. */
@@ -88,15 +103,20 @@ export function bakeSpiralLayers({
   theme,
   settings,
   phrases,
+  ringCountSubtract = 0,
 }: SpiralBakeInput): SpiralBakeResult {
   // Base outer radius for the 10-ring core — not redistributed when extras are added.
   const baseRadius = Math.max(12, Math.min(height * 0.46 - 18, width * 0.48 - 18));
-  const count = resolveRingCount(viewportWidth, mobile, settings);
+  const count = resolveRingCount(viewportWidth, mobile, settings, ringCountSubtract);
   const radiusPower = SPACING_RADIUS_POWER[settings.ringSpacing];
-  // Outward growth only when we have more rings than the stable base set.
+  /*
+    Radial reference is always the full base set (10 for Minimal/Responsive).
+    When count < baseCount (sidebar subtract), outer rings are omitted and
+    remaining rings keep their original radii — no redistribution.
+  */
   const baseCount =
     settings.ringCountMode === 'Responsive' || settings.ringSpacing === 'Minimal'
-      ? Math.min(BASE_RING_COUNT, count)
+      ? BASE_RING_COUNT
       : count;
 
   const rings = createSpiralRings(baseRadius, count, phrases.length ? phrases : SPIRAL_PHRASES, {
@@ -159,15 +179,20 @@ export function spiralCacheKey(
     'accent' | 'intensity' | 'ringSpacing' | 'textFragmentation' | 'ringCountMode' | 'blueAccent'
   >,
   phrases: readonly string[],
+  ringCountSubtract = 0,
 ): string {
   const ringBucket =
     settings.ringCountMode === 'Responsive'
-      ? resolveResponsiveRingCount(viewportWidth)
-      : 'fixed';
+      ? applySidebarRingSubtract(
+          resolveResponsiveRingCount(viewportWidth),
+          ringCountSubtract,
+        )
+      : `fixed-${ringCountSubtract}`;
   return JSON.stringify([
     width,
     height,
     ringBucket,
+    ringCountSubtract,
     theme,
     settings.accent,
     settings.intensity,

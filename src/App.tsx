@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
+import HeroProductNav from './components/hero/HeroProductNav';
 import LandingBelowHero from './components/landing/LandingBelowHero';
 import PromptInput, { COMPOSER_HEIGHT_COLLAPSE_MS } from './components/PromptInput';
 import DesignPlayground from './components/DesignPlayground';
@@ -8,8 +9,28 @@ import ButtonShowcase from './components/ButtonShowcase';
 import GenerativeCanvas, { initialSettings } from './components/GenerativeCanvas';
 import ChatWorkspace from './components/ChatWorkspace/ChatWorkspace';
 import type { Theme } from './components/ThemeSwitcher';
+import { CURRENT_PRODUCT_ID } from './components/header/products';
 import { SAMPLE_DOCUMENT_TEXT } from './data/sampleDetectionReport';
 import type { ComposerMode } from './types/composer';
+import { SIDEBAR_RING_SUBTRACT } from './components/canvasSettings';
+import {
+  isSidebarNav,
+  isStagePersistentNav,
+  readNavVariant,
+  type NavVariant,
+} from './utils/navVariant';
+
+/** Optional `?spiralSubtract=0|1|2` for V22.9.9 comparison; default −2 on sidebars. */
+function readSidebarRingSubtract(nav: NavVariant): number {
+  if (!isSidebarNav(nav)) return 0;
+  try {
+    const raw = new URLSearchParams(window.location.search).get('spiralSubtract');
+    if (raw === '0' || raw === '1' || raw === '2') return Number(raw);
+  } catch {
+    /* ignore */
+  }
+  return SIDEBAR_RING_SUBTRACT;
+}
 
 function scrollWindowToTop(behavior: ScrollBehavior = 'auto') {
   try {
@@ -78,6 +99,12 @@ export default function App() {
   const [focusToken, setFocusToken] = useState(0);
   /** Presentation demo (?demo=1): sample fixture only when text matches exactly. */
   const [demoMode] = useState(readDemoMode);
+  /** V22.9.8–V22.9.14 design exploration: ?nav=top|editorial|surface|surface-minimal */
+  const [navVariant] = useState(readNavVariant);
+  const [ringCountSubtract] = useState(() => readSidebarRingSubtract(readNavVariant()));
+  const [selectedProductId, setSelectedProductId] = useState(CURRENT_PRODUCT_ID);
+  const sidebarNav = isSidebarNav(navVariant);
+  const showingDetector = selectedProductId === CURRENT_PRODUCT_ID;
   const dialog = useRef<HTMLDialogElement>(null);
   const timers = useRef<number[]>([]);
   /** Holds submitted text from Detect AI until Workspace mounts. */
@@ -124,6 +151,7 @@ export default function App() {
     setResetToken(n => n + 1);
     setComposerMode('new-check');
     setComposerActive(false);
+    /* Product selection is owned separately (V22.9.10); do not reset here. */
   }, []);
 
   const handleDetect = useCallback(
@@ -302,12 +330,42 @@ export default function App() {
     handleNewCheck();
   }, [handleNewCheck]);
 
+  /**
+   * Editorial/surface product selection.
+   * Leaving Workspace for a concept preview clears the demo report after confirm.
+   */
+  const handleSelectProduct = useCallback(
+    (id: string) => {
+      if (id === selectedProductId) return;
+
+      const leavingWorkspace =
+        (view === 'workspace' || showWorkspace) && id !== CURRENT_PRODUCT_ID;
+
+      if (leavingWorkspace) {
+        const ok = window.confirm(
+          'Leave the current report to view this product preview? Your current detection preview will be cleared.',
+        );
+        if (!ok) return;
+        setSelectedProductId(id);
+        handleNewCheckWithScrollReset();
+        return;
+      }
+
+      setSelectedProductId(id);
+    },
+    [selectedProductId, view, showWorkspace, handleNewCheckWithScrollReset],
+  );
+
   return (
     <>
       <div
         className="page"
         data-view={view}
         data-transition={transition === 'none' ? undefined : transition}
+        data-nav={navVariant === 'top' ? undefined : navVariant}
+        data-product-preview={
+          landingActive && sidebarNav && !showingDetector ? '1' : undefined
+        }
         style={
           {
             ['--exit-ms']: `${TRANSITION_MS}ms`,
@@ -325,6 +383,7 @@ export default function App() {
           onThemeChange={setTheme}
           showStartOver={inWorkspaceChrome && !busy}
           onStartOver={handleNewCheckWithScrollReset}
+          hideDesktopProducts={sidebarNav}
         />
         {/*
           First-screen stage: full-bleed Hero clip on Landing, viewport shell
@@ -334,7 +393,26 @@ export default function App() {
         <div className="app-stage">
           {spiralAlive && (
             <div className="spiral-exit-layer" aria-hidden="true">
-              <GenerativeCanvas theme={theme} settings={settings} />
+              <GenerativeCanvas
+                theme={theme}
+                settings={settings}
+                ringCountSubtract={ringCountSubtract}
+              />
+            </div>
+          )}
+          {/*
+            V22.9.10 / V22.9.13 / V22.9.14 — stage-persistent Product Index
+            (Editorial, Surface, Surface Minimal). Scrolls with the stage on
+            Landing; stays in the Workspace shell. Does not Crossfade with Hero.
+            Visual chrome remains variant-specific.
+          */}
+          {isStagePersistentNav(navVariant) && (
+            <div className="stage-product-nav" data-stage-nav={navVariant}>
+              <HeroProductNav
+                variant={navVariant}
+                selectedProductId={selectedProductId}
+                onSelectProduct={handleSelectProduct}
+              />
             </div>
           )}
           <main className={mainWorkspace ? 'main--workspace' : 'main--landing'}>
@@ -344,7 +422,7 @@ export default function App() {
                 aria-hidden={!landingActive || undefined}
                 {...(!landingActive ? { tabIndex: -1 } : {})}
               >
-                <Hero />
+                <Hero navVariant={navVariant} selectedProductId={selectedProductId} />
               </div>
             )}
             {showWorkspace && documentText !== null && (
@@ -366,6 +444,7 @@ export default function App() {
               </div>
             )}
           </main>
+          {/* Shared Composer instance — hidden (not unmounted) during concept previews. */}
           <PromptInput
             variant={inWorkspaceChrome ? 'workspace' : 'landing'}
             onSubmit={handleDetectWithScrollReset}
@@ -379,7 +458,8 @@ export default function App() {
             focusToken={focusToken}
           />
         </div>
-        {landingActive && (
+        {/* SEO stays on AI Text Detector only — no invented product SEO. */}
+        {landingActive && showingDetector && (
           <LandingBelowHero theme={theme} onTryDetector={handleTryDetector} />
         )}
       </div>

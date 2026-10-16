@@ -21,6 +21,11 @@ type Props = {
   onStartOver?: () => void;
   /** True while Workspace chrome is active — Start over visible without layout jump. */
   showStartOver?: boolean;
+  /**
+   * V22.9.8 — hide desktop product strip when Hero owns product navigation
+   * (editorial / surface / surface-minimal). Mobile menu products remain available.
+   */
+  hideDesktopProducts?: boolean;
 };
 
 export default function Header({
@@ -28,6 +33,7 @@ export default function Header({
   onThemeChange,
   onStartOver,
   showStartOver = false,
+  hideDesktopProducts = false,
 }: Props) {
   const [authMode] = useState<HeaderAuthMode>(() => readHeaderAuthPreview());
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
@@ -111,9 +117,11 @@ export default function Header({
               height="42"
             />
           </a>
-          <div className="header-desktop-products">
-            <ProductsNav />
-          </div>
+          {!hideDesktopProducts && (
+            <div className="header-desktop-products">
+              <ProductsNav />
+            </div>
+          )}
         </div>
 
         <div className="header-right">

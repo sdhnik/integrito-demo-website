@@ -53,6 +53,23 @@ export function resolveResponsiveRingCount(viewportWidth: number): number {
 }
 
 /**
+ * V22.9.9 — sidebar Hero layouts trim outer rings from the responsive count.
+ * Rings are clipped (not redistributed). Floor keeps a recognizable spiral.
+ * −1 is the smallest reduction that clears H1 overlap at 1440 (measured);
+ * −2 remains available via ?spiralSubtract=2 for comparison.
+ */
+export const SIDEBAR_RING_SUBTRACT = 1;
+export const SIDEBAR_RING_MIN = 8;
+
+export function applySidebarRingSubtract(
+  baseRings: number,
+  subtract: number = SIDEBAR_RING_SUBTRACT,
+  minRings: number = SIDEBAR_RING_MIN,
+): number {
+  return Math.max(minRings, baseRings - Math.max(0, subtract));
+}
+
+/**
  * Multiplier on the V9 shader baseline.
  * Very Subtle = half of V9 Subtle; Original ≈ Phase-2 peak.
  */

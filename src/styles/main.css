@@ -40,6 +40,13 @@
   --header-height: 58px;
   --page-pad-x: 64px;
   --page-pad-top: 34px;
+  /*
+    V22.9.11 — Crossfade overlay gutters. Absolute .landing-hero-layer must
+    match the idle main content origin for every nav variant. Default equals
+    page gutters (top + surface). Editorial overrides left with stage inset.
+  */
+  --hero-overlay-left: var(--page-pad-x);
+  --hero-overlay-right: var(--page-pad-x);
   --workspace-content-width: var(--composer-max-width);
   --workspace-result-gap: 16px;
   /* Visible prompt-to-result spacing and usable document budget. */
@@ -787,6 +794,395 @@ h1 > span:not(.period) {
   color: var(--muted);
   letter-spacing: -0.2px;
   margin: 0;
+}
+
+/*
+  V22.9.8 / V22.9.10 / V22.9.12 / V22.9.13 / V22.9.14 — product nav experiments.
+  ?nav=top (default): unchanged.
+  ?nav=editorial | surface | surface-minimal: stage-persistent Product Index +
+    shared content inset. Visual chrome differs per variant.
+*/
+.page[data-nav="editorial"] {
+  --hero-nav-width: 186px;
+  --hero-nav-gap: 36px;
+  --stage-content-inset: calc(var(--hero-nav-width) + var(--hero-nav-gap));
+  --hero-overlay-left: calc(var(--page-pad-x) + var(--stage-content-inset));
+}
+/*
+  Surface: bordered panel chrome preserved. 216 + 32 = 248 inset so H1 left
+  stays ≈ 312 at 1440 (same content origin as former in-Hero split).
+*/
+.page[data-nav="surface"] {
+  --hero-nav-width: 216px;
+  --hero-nav-gap: 32px;
+  --stage-content-inset: calc(var(--hero-nav-width) + var(--hero-nav-gap));
+  --hero-overlay-left: calc(var(--page-pad-x) + var(--stage-content-inset));
+}
+/*
+  Surface Minimal: 200 + 48 = 248 inset. Transparent chrome; same lifecycle.
+*/
+.page[data-nav="surface-minimal"] {
+  --hero-nav-width: 200px;
+  --hero-nav-gap: 48px;
+  --stage-content-inset: calc(var(--hero-nav-width) + var(--hero-nav-gap));
+  --hero-overlay-left: calc(var(--page-pad-x) + var(--stage-content-inset));
+}
+
+/*
+  Stage-persistent variants: inset main so Hero H1 and Workspace document share
+  one content column with the Composer (same left/right contracts).
+*/
+.page[data-nav="editorial"] main.main--landing,
+.page[data-nav="editorial"] main.main--workspace,
+.page[data-nav="surface"] main.main--landing,
+.page[data-nav="surface"] main.main--workspace,
+.page[data-nav="surface-minimal"] main.main--landing,
+.page[data-nav="surface-minimal"] main.main--workspace {
+  padding-left: calc(var(--page-pad-x) + var(--stage-content-inset));
+}
+
+/* Stage-persistent Editorial index — mirrors Hero vertical padding band. */
+.stage-product-nav {
+  position: absolute;
+  z-index: 5;
+  left: var(--page-pad-x);
+  top: calc(var(--header-height) + var(--page-pad-top) + 22px);
+  bottom: clamp(168px, 28dvh, 240px);
+  width: var(--hero-nav-width);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.stage-product-nav .hero-product-nav {
+  pointer-events: auto;
+  width: 100%;
+  /* Match pre-lift Hero flex nudge so Landing nav top stays approved. */
+  margin-top: calc(var(--header-height) * -0.15);
+  align-self: center;
+}
+
+.hero--split {
+  display: flex;
+  align-items: stretch;
+  gap: var(--hero-nav-gap);
+  width: 100%;
+}
+
+.hero-main {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.hero-product-nav {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 var(--hero-nav-width);
+  width: var(--hero-nav-width);
+  align-self: center;
+  margin-top: calc(var(--header-height) * -0.15);
+  pointer-events: auto;
+}
+
+.hero-product-nav-label {
+  margin: 0 0 18px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+.hero-product-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-product-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--button-font-weight);
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--button-radius-menu);
+  transition:
+    color var(--button-transition),
+    background-color var(--button-transition),
+    opacity var(--button-transition);
+}
+
+.hero-product-nav-item:hover {
+  color: var(--text);
+}
+
+.hero-product-nav-item.is-active {
+  color: var(--text);
+}
+
+.hero-product-nav-item.is-soon:not(.is-active) {
+  color: var(--muted);
+}
+
+.hero-product-nav-num {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--subtle);
+  opacity: 0.85;
+}
+
+.hero-product-nav-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hero-product-nav-indicator {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Editorial — airy index, optional hairline divider */
+.hero-product-nav--editorial {
+  padding-right: 18px;
+  border-right: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+}
+
+.hero-product-nav--editorial .hero-product-nav-item.is-active .hero-product-nav-num {
+  color: var(--accent);
+}
+
+/* Surface — soft selector panel */
+.hero-product-nav--surface {
+  padding: 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 72%, var(--bg));
+}
+
+.hero-product-nav--surface .hero-product-nav-label {
+  margin: 0 4px 12px;
+}
+
+.hero-product-nav--surface .hero-product-nav-item {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+.hero-product-nav--surface .hero-product-nav-item:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.hero-product-nav--surface .hero-product-nav-item.is-active {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.hero-product-nav--surface .hero-product-nav-indicator {
+  margin-left: auto;
+}
+
+/*
+  V22.9.12 — Surface Minimal
+  Same product list + interactions as Surface; no outer panel chrome.
+  Active row keeps soft Integrito blue; inactive rows stay transparent.
+*/
+.hero-product-nav--surface-minimal {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-product-nav--surface-minimal .hero-product-nav-label {
+  margin: 0 2px 14px;
+}
+
+.hero-product-nav--surface-minimal .hero-product-nav-item {
+  padding: 9px 12px;
+  min-height: var(--button-height-sm);
+  gap: 8px;
+  border-radius: var(--button-radius);
+  background: transparent;
+  font-size: var(--button-font-size-sm);
+  font-weight: var(--button-font-weight);
+}
+
+.hero-product-nav--surface-minimal .hero-product-nav-item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.hero-product-nav--surface-minimal .hero-product-nav-item.is-active {
+  color: var(--text);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.hero-product-nav--surface-minimal .hero-product-nav-indicator {
+  margin-left: auto;
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+}
+
+:root[data-theme="dark"] .hero-product-nav--surface-minimal .hero-product-nav-item:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+:root[data-theme="dark"] .hero-product-nav--surface-minimal .hero-product-nav-item.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--text);
+}
+
+/* Concept preview — no heading tags */
+.product-concept-preview {
+  position: relative;
+  z-index: 2;
+  max-width: 28rem;
+  pointer-events: auto;
+}
+
+.product-concept-eyebrow {
+  margin: 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+.product-concept-title {
+  margin: 0 0 16px;
+  font-family: var(--font-ui);
+  font-size: clamp(28px, 3.2vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.product-concept-body {
+  margin: 0 0 18px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.product-concept-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--subtle);
+}
+
+/*
+  Stage-persistent Composer: center within the inset content column
+  (matches main padding-left inset). Same left on Landing + Workspace.
+  Content left L = pad + inset; right R = 100% - pad; center = (L+R)/2.
+*/
+.page[data-nav="editorial"] .input-section,
+.page[data-nav="surface"] .input-section,
+.page[data-nav="surface-minimal"] .input-section {
+  left: calc((100% + var(--stage-content-inset)) / 2);
+  /* Match .workspace-layout max-width:100% of the inset content column. */
+  width: min(
+    var(--composer-max-width),
+    calc(100% - (var(--page-pad-x) * 2) - var(--stage-content-inset))
+  );
+}
+
+.page[data-product-preview] .input-section {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Soften spiral through the sidebar column without changing the WebGL engine. */
+.page[data-nav="editorial"] .spiral-exit-layer::after,
+.page[data-nav="surface"] .spiral-exit-layer::after,
+.page[data-nav="surface-minimal"] .spiral-exit-layer::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--page-pad-x) + var(--hero-nav-width) + var(--hero-nav-gap) * 0.55);
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--bg) 88%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-product-nav-item {
+    transition: none;
+  }
+}
+
+/* Compact: no desktop sidebar — existing Header + mobile Products menu. */
+@media (max-width: 1210px) {
+  /*
+    V22.9.11 / V22.9.13: collapse stage-inset tokens so Crossfade overlay
+    gutters match idle main (page-pad-x only).
+  */
+  .page[data-nav="editorial"],
+  .page[data-nav="surface"],
+  .page[data-nav="surface-minimal"] {
+    --stage-content-inset: 0px;
+    --hero-overlay-left: var(--page-pad-x);
+  }
+
+  .page[data-nav="editorial"] .stage-product-nav,
+  .page[data-nav="surface"] .stage-product-nav,
+  .page[data-nav="surface-minimal"] .stage-product-nav {
+    display: none;
+  }
+
+  .page[data-nav="editorial"] main.main--landing,
+  .page[data-nav="editorial"] main.main--workspace,
+  .page[data-nav="surface"] main.main--landing,
+  .page[data-nav="surface"] main.main--workspace,
+  .page[data-nav="surface-minimal"] main.main--landing,
+  .page[data-nav="surface-minimal"] main.main--workspace {
+    padding-left: var(--page-pad-x);
+  }
+
+  .page[data-nav="editorial"] .input-section,
+  .page[data-nav="surface"] .input-section,
+  .page[data-nav="surface-minimal"] .input-section {
+    left: 50%;
+    width: var(--composer-max-width);
+  }
 }
 
 /*
@@ -1911,14 +2307,19 @@ h1 > span:not(.period) {
   V22.9.5: Do NOT use inset:0. Absolutely positioned children of main are
   placed against the padding edge, so inset:0 drops main's horizontal
   gutters (--page-pad-x) and the headline jumps left by that amount.
-  Match the idle Landing content box with explicit left/right gutters.
+
+  V22.9.11: Use shared --hero-overlay-left/right so every nav variant matches
+  its idle content origin. Editorial adds --stage-content-inset via the token;
+  top/surface keep page-pad-x. width:auto so left+right constrain (overrides
+  the idle width:100% which would ignore right under absolute positioning).
 */
 .page[data-transition="to-workspace"] .landing-hero-layer {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--page-pad-x);
-  right: var(--page-pad-x);
+  left: var(--hero-overlay-left);
+  right: var(--hero-overlay-right);
+  width: auto;
   z-index: 1;
   flex: none;
   pointer-events: none;
@@ -1953,8 +2354,9 @@ h1 > span:not(.period) {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--page-pad-x);
-  right: var(--page-pad-x);
+  left: var(--hero-overlay-left);
+  right: var(--hero-overlay-right);
+  width: auto;
   z-index: 1;
   flex: none;
   opacity: 0;

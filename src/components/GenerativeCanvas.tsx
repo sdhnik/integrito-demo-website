@@ -11,6 +11,11 @@ type Props = {
   theme: 'light' | 'dark';
   settings: CanvasSettings;
   phrases?: readonly string[];
+  /**
+   * V22.9.9 — sidebar nav variants subtract outer rings from the responsive
+   * count (clipped, not redistributed). Top nav keeps 0.
+   */
+  ringCountSubtract?: number;
 };
 
 type Wave = { x: number; y: number; age: number; amp: number };
@@ -48,16 +53,17 @@ export default function GenerativeCanvas({
   theme,
   settings,
   phrases = SPIRAL_PHRASES,
+  ringCountSubtract = 0,
 }: Props) {
   const [mode, setMode] = useState<'gpu' | 'static'>('gpu');
   const ref = useRef<HTMLCanvasElement>(null);
-  const current = useRef({ theme, settings, phrases });
+  const current = useRef({ theme, settings, phrases, ringCountSubtract });
   const refresh = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    current.current = { theme, settings, phrases };
+    current.current = { theme, settings, phrases, ringCountSubtract };
     refresh.current?.();
-  }, [theme, settings, phrases]);
+  }, [theme, settings, phrases, ringCountSubtract]);
 
   useEffect(() => {
     const canvas = ref.current!;
@@ -72,13 +78,28 @@ export default function GenerativeCanvas({
       let cacheKey = '';
 
       const prepare = () => {
-        const { theme, settings, phrases } = current.current;
+        const { theme, settings, phrases, ringCountSubtract } = current.current;
         const viewportWidth = window.innerWidth;
-        const key = spiralCacheKey(width, height, viewportWidth, theme, settings, phrases);
+        const key = spiralCacheKey(
+          width,
+          height,
+          viewportWidth,
+          theme,
+          settings,
+          phrases,
+          ringCountSubtract,
+        );
         if (!width || !height || key === cacheKey) return;
         cacheKey = key;
         const baked = bakeSpiralLayers({
-          width, height, viewportWidth, mobile, theme, settings, phrases,
+          width,
+          height,
+          viewportWidth,
+          mobile,
+          theme,
+          settings,
+          phrases,
+          ringCountSubtract,
         });
         paintStaticSpiral(ctx, width, height, baked);
       };
@@ -139,13 +160,28 @@ export default function GenerativeCanvas({
     };
 
     const prepare = () => {
-      const { theme, settings, phrases } = current.current;
+      const { theme, settings, phrases, ringCountSubtract } = current.current;
       const viewportWidth = window.innerWidth;
-      const key = spiralCacheKey(width, height, viewportWidth, theme, settings, phrases);
+      const key = spiralCacheKey(
+        width,
+        height,
+        viewportWidth,
+        theme,
+        settings,
+        phrases,
+        ringCountSubtract,
+      );
       if (!width || !height || key === cacheKey) return;
       cacheKey = key;
       const baked = bakeSpiralLayers({
-        width, height, viewportWidth, mobile, theme, settings, phrases,
+        width,
+        height,
+        viewportWidth,
+        mobile,
+        theme,
+        settings,
+        phrases,
+        ringCountSubtract,
       });
       gpu.setLayers(baked);
     };

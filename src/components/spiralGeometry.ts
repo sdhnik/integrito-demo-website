@@ -191,6 +191,10 @@ export type CreateSpiralOptions = {
   /**
    * Rings that occupy `radius`. Additional rings (count - baseRingCount)
    * are placed OUTSIDE with the same radial gap as the last base step.
+   *
+   * When count < baseRingCount, only the inner `count` rings are built —
+   * they keep the same radii as in the full base set (outer rings are
+   * clipped, not redistributed across baseRadius).
    */
   baseRingCount?: number;
 };
@@ -224,7 +228,8 @@ export function createSpiralRings(
   const fragmentation = options.fragmentation ?? 'None';
   const blueAccent = options.blueAccent ?? 'None';
   const radiusPower = options.radiusPower ?? 1.12;
-  const baseCount = Math.min(Math.max(2, options.baseRingCount ?? count), count);
+  /* Allow baseRingCount > count so outer rings can be clipped without redistribution. */
+  const baseCount = Math.max(2, options.baseRingCount ?? count);
 
   const neighborAngles: number[] = [];
   const rings: SpiralRing[] = [];
